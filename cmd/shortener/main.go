@@ -1,72 +1,79 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
-	"time"
+	"strconv"
+	"sync"
 )
 
-// Мапа для хранения сокращенных URL
-var urlMap map[string]string
-
-func main() {
-	urlMap = make(map[string]string)
-
-	http.HandleFunc("/", handleRoot)
-	http.HandleFunc("/{id}", handleID)
-	http.ListenAndServe(":8080", nil)
+type URLShortener struct {
+	urlMap    map[int]string
+	idCounter int
+	mutex     sync.Mutex
 }
 
-func handleRoot(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "POST" {
-		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+func NewURLShortener() *URLShortener {
+	return &URLShortener{
+		urlMap:    make(map[int]string),
+		idCounter: 1,
+		mutex:     sync.Mutex{},
+	}
+}
+
+func (s *URLShortener) ShortenURL(w http.ResponseWriter, r *http.Request) {
+	var urlData struct {
+		URL string `json:"url"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&urlData); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	url := r.FormValue("url")
-	if url == "" {
-		http.Error(w, "Bad Request: URL is required", http.StatusBadRequest)
-		return
-	}
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 
-	// Генерация уникального ID для сокращенного URL
-	id := generateID()
+	shortURL := strconv.Itoa(s.idCounter)
+	s.urlMap[s.idCounter] = urlData.URL
+	s.idCounter++
 
-	// Добавление сокращенного URL в мапу
-	urlMap[id] = url
-
-	// Формирование сокращенного URL
-	shortURL := fmt.Sprintf("http://localhost:8080/%s", id)
+	response := map[string]string{"shortened_url": fmt.Sprintf("http://localhost:8080/%s", shortURL)}
+	responseJSON, _ := json.Marshal(response)
 
 	w.WriteHeader(http.StatusCreated)
-	fmt.Fprintf(w, shortURL)
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(responseJSON)
 }
 
-func handleID(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "GET" {
-		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
-		return
-	}
+func (s *URLShortener) RedirectOriginalURL(w http.ResponseWriter, r *http.Request) {
+	id := r.URL.Path[1:]
 
-	id := r.URL.Path[len("/"):]
-	if id == "" {
-		http.Error(w, "Bad Request: ID is required", http.StatusBadRequest)
-		return
-	}
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 
-	// Поиск оригинального URL по ID в мапе
-	originalURL, ok := urlMap[id]
-	if !ok {
-		http.Error(w, "Not Found", http.StatusNotFound)
-		return
+	if idInt, err := strconv.Atoi(id); err == nil {
+		if originalURL, ok := s.urlMap[idInt]; ok {
+			http.Redirect(w, r, originalURL, http.StatusTemporaryRedirect)
+			return
+		}
 	}
-
-	http.Redirect(w, r, originalURL, http.StatusTemporaryRedirect)
+	http.Error(w, "URL not found", http.StatusBadRequest)
 }
 
-// Генерация уникального ID
-func generateID() string {
-	// Здесь может быть логика генерации уникального ID, например, случайная строка
-	// В данном примере просто используется текущее время в качестве ID
-	return fmt.Sprintf("%d", time.Now().UnixNano())
+func main() {
+	shortener := NewURLShortener()
+
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodPost:
+			shortener.ShortenURL(w, r)
+		case http.MethodGet:
+			shortener.RedirectOriginalURL(w, r)
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
+	http.ListenAndServe(":8080", nil)
 }
