@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/go-chi/chi/v5"
 	"io"
@@ -16,7 +17,7 @@ type Item struct {
 
 type ShortenedURL struct {
 	ID        int    `json:"id"`
-	Original  string `json:"original"`
+	Original  string `json:"url"`
 	Shortened string `json:"shortened"`
 }
 
@@ -65,4 +66,44 @@ func GetOriginalURL(w http.ResponseWriter, r *http.Request) {
 
 	// Если сокращенный URL не найден, отправляем ошибку 400
 	http.Error(w, fmt.Sprintf("Сокращенный URL с ID %v не найден", id), http.StatusBadRequest)
+}
+
+func ApiShorten(w http.ResponseWriter, r *http.Request) {
+	var newItem ShortenedURL
+
+	type result struct {
+		Result string `json:"result"`
+	}
+
+	var resultW result
+
+	// Декодирование JSON из тела запроса в переменную newItem
+	err := json.NewDecoder(r.Body).Decode(&newItem)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Генерация ID для нового элемента
+	newItem.ID = len(shortenedURLs) + 1
+
+	// Формирование сокращенной ссылки
+	newItem.Shortened = "http://localhost:8080/" + strconv.Itoa(newItem.ID)
+
+	// Добавление нового элемента в массив
+	shortenedURLs = append(shortenedURLs, newItem)
+
+	resultW.Result = newItem.Shortened
+
+	// Кодирование сокращенной ссылки в JSON
+	responseJSON, err := json.Marshal(resultW)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Отправка ответа в виде JSON
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	w.Write(responseJSON)
 }
