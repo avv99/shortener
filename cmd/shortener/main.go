@@ -2,63 +2,57 @@ package main
 
 import (
 	"fmt"
-	"math/rand"
 	"net/http"
-	"strconv"
+	"time"
 )
 
-var (
-	shortURLs map[string]string // Мапа для хранения сокращенных URL
-	baseURL   = "http://localhost:8080"
-)
+var urls map[string]string
 
 func main() {
-	shortURLs = make(map[string]string)
+	urls = make(map[string]string)
 
-	http.HandleFunc("/", handleRoot)
-	http.HandleFunc("/shorten", handleShorten)
-	http.HandleFunc("/redirect/", handleRedirect)
+	http.HandleFunc("/", handlePost)
+	http.HandleFunc("/{id}", handleGet)
 
-	fmt.Println("Server is running at", baseURL)
+	fmt.Println("Server is running at http://localhost:8080")
 	http.ListenAndServe(":8080", nil)
 }
 
-func handleRoot(w http.ResponseWriter, r *http.Request) {
-	http.Error(w, "Invalid request", http.StatusBadRequest)
-}
-
-func handleShorten(w http.ResponseWriter, r *http.Request) {
+func handlePost(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	r.ParseForm()
-	longURL := r.Form.Get("url")
-	if longURL == "" {
+	url := r.FormValue("url")
+	if url == "" {
 		http.Error(w, "URL is required", http.StatusBadRequest)
 		return
 	}
 
-	shortID := generateShortID()
-	shortURL := baseURL + "/redirect/" + shortID
-	shortURLs[shortID] = longURL
+	id := generateID()
+	urls[id] = url
 
 	w.WriteHeader(http.StatusCreated)
-	fmt.Fprintf(w, shortURL)
+	fmt.Fprintf(w, "Shortened URL: http://localhost:8080/%s", id)
 }
 
-func handleRedirect(w http.ResponseWriter, r *http.Request) {
-	shortID := r.URL.Path[len("/redirect/"):]
-	longURL, ok := shortURLs[shortID]
-	if !ok {
-		http.Error(w, "Invalid short URL", http.StatusBadRequest)
+func handleGet(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	http.Redirect(w, r, longURL, http.StatusTemporaryRedirect)
+	id := r.URL.Path[1:]
+	url, ok := urls[id]
+	if !ok {
+		http.Error(w, "URL Not Found", http.StatusNotFound)
+		return
+	}
+
+	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }
 
-func generateShortID() string {
-	return strconv.Itoa(rand.Intn(1000000)) // Генерация случайного числа в диапазоне [0, 1000000)
+func generateID() string {
+	return fmt.Sprintf("%d", time.Now().UnixNano())
 }
