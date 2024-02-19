@@ -77,8 +77,9 @@ func getOriginalURL(w http.ResponseWriter, r *http.Request) {
 
 	for _, shortenedURL := range shortenedURLs {
 		if shortenedURL.ID == id {
-			// Отправляем оригинальный URL в заголовке Location
+			// Устанавливаем заголовок Location для перенаправления
 			w.Header().Set("Location", shortenedURL.Original)
+			// Устанавливаем статус ответа на 307 Temporary Redirect
 			w.WriteHeader(http.StatusTemporaryRedirect)
 			return
 		}
