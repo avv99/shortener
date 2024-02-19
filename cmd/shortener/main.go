@@ -40,6 +40,9 @@ func handleRequest(w http.ResponseWriter, r *http.Request) {
 }
 
 func addItem(w http.ResponseWriter, r *http.Request) {
+	// Установка заголовка Content-Type для того, чтобы гарантировать, что данные интерпретируются как JSON
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+
 	var newItem Item
 	err := json.NewDecoder(r.Body).Decode(&newItem)
 	if err != nil {
@@ -65,7 +68,7 @@ func addItem(w http.ResponseWriter, r *http.Request) {
 	shortenedURLs = append(shortenedURLs, shortenedURL)
 
 	w.WriteHeader(http.StatusCreated)
-	fmt.Fprintf(w, shortenedURL.Shortened)
+	json.NewEncoder(w).Encode(shortenedURL.Shortened)
 }
 
 func getOriginalURL(w http.ResponseWriter, r *http.Request) {
