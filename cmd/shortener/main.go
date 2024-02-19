@@ -1,79 +1,45 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
-	"strconv"
-	"sync"
 )
 
-type URLShortener struct {
-	urlMap    map[int]string
-	idCounter int
-	mutex     sync.Mutex
+func main() {
+	http.HandleFunc("/", handlePost)
+	http.HandleFunc("/{id}", handleGet)
+	fmt.Println("Server is running at http://localhost:8080")
+	http.ListenAndServe(":8080", nil)
 }
 
-func NewURLShortener() *URLShortener {
-	return &URLShortener{
-		urlMap:    make(map[int]string),
-		idCounter: 1,
-		mutex:     sync.Mutex{},
-	}
-}
-
-func (s *URLShortener) ShortenURL(w http.ResponseWriter, r *http.Request) {
-	var urlData struct {
-		URL string `json:"url"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&urlData); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+func handlePost(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-
-	shortURL := strconv.Itoa(s.idCounter)
-	s.urlMap[s.idCounter] = urlData.URL
-	s.idCounter++
-
-	response := map[string]string{"shortened_url": fmt.Sprintf("http://localhost:8080/%s", shortURL)}
-	responseJSON, _ := json.Marshal(response)
-
-	w.WriteHeader(http.StatusCreated)
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(responseJSON)
-}
-
-func (s *URLShortener) RedirectOriginalURL(w http.ResponseWriter, r *http.Request) {
-	id := r.URL.Path[1:]
-
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-
-	if idInt, err := strconv.Atoi(id); err == nil {
-		if originalURL, ok := s.urlMap[idInt]; ok {
-			http.Redirect(w, r, originalURL, http.StatusTemporaryRedirect)
-			return
-		}
+	// Чтение строки URL из тела запроса
+	url := r.FormValue("url")
+	if url == "" {
+		http.Error(w, "URL is required", http.StatusBadRequest)
+		return
 	}
-	http.Error(w, "URL not found", http.StatusBadRequest)
+
+	// Ваша логика для сокращения URL
+	shortenedURL := shortenURL(url)
+
+	// Отправка ответа с сокращенным URL
+	w.WriteHeader(http.StatusCreated)
+	fmt.Fprintf(w, shortenedURL)
 }
 
-func main() {
-	shortener := NewURLShortener()
+// Ваша логика для сокращения URL
+func shortenURL(url string) string {
+	// Ваш код для сокращения URL
+	return "shortened-url"
+}
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case http.MethodPost:
-			shortener.ShortenURL(w, r)
-		case http.MethodGet:
-			shortener.RedirectOriginalURL(w, r)
-		default:
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		}
-	})
-
-	http.ListenAndServe(":8080", nil)
+func handleGet(w http.ResponseWriter, r *http.Request) {
+	id := r.URL.Path[len("/"):]
+	fmt.Fprintf(w, "This is GET /%s endpoint", id)
 }
