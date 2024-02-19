@@ -24,15 +24,7 @@ var items []Item
 var shortenedURLs []ShortenedURL
 
 func AddItem(w http.ResponseWriter, r *http.Request) {
-	// Установка заголовка Content-Type для того, чтобы гарантировать, что данные интерпретируются как JSON
-	//w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
-	//var newItem Item
-	//err := json.NewDecoder(r.Body).Decode(&newItem)
-	//if err != nil {
-	//	http.Error(w, "Внутренняя ошибка сервера", http.StatusInternalServerError)
-	//	return
-	//}
 	str, err := io.ReadAll(r.Body)
 	if err != nil {
 		log.Println(err)
@@ -40,9 +32,6 @@ func AddItem(w http.ResponseWriter, r *http.Request) {
 	}
 
 	id := len(shortenedURLs) + 1
-	//items = append(items, newItem)
-
-	// Создаем сокращенную ссылку
 	shortenedURL := ShortenedURL{
 		ID:        id,
 		Original:  string(str),
@@ -52,7 +41,6 @@ func AddItem(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusCreated)
 	w.Write([]byte(shortenedURL.Shortened))
-	//json.NewEncoder(w).Encode(shortenedURL.Shortened)
 }
 
 func GetOriginalURL(w http.ResponseWriter, r *http.Request) {
