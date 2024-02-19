@@ -1,58 +1,89 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
-	"time"
+	"strconv"
+	"strings"
 )
 
-var urls map[string]string
+type Item struct {
+	ID   int    `json:"id"`
+	Name string `json:"name"`
+}
+
+type ShortenedURL struct {
+	ID        int    `json:"id"`
+	Original  string `json:"original"`
+	Shortened string `json:"shortened"`
+}
+
+var items []Item
+var shortenedURLs []ShortenedURL
 
 func main() {
-	urls = make(map[string]string)
-
-	http.HandleFunc("/", handlePost)
-	http.HandleFunc("/{id}", handleGet)
-
-	fmt.Println("Server is running at http://localhost:8080")
+	http.HandleFunc("/", handleRequest)
+	fmt.Println("Сервер запущен на порту 8080...")
 	http.ListenAndServe(":8080", nil)
 }
 
-func handlePost(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+func handleRequest(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case "POST":
+		addItem(w, r)
+	case "GET":
+		getOriginalURL(w, r)
+	default:
+		http.Error(w, "Метод не поддерживается", http.StatusMethodNotAllowed)
+	}
+}
+
+func addItem(w http.ResponseWriter, r *http.Request) {
+	var newItem Item
+	err := json.NewDecoder(r.Body).Decode(&newItem)
+	if err != nil {
+		http.Error(w, "Ошибка при декодировании JSON", http.StatusBadRequest)
 		return
 	}
 
-	url := r.FormValue("url")
-	if url == "" {
-		http.Error(w, "URL is required", http.StatusBadRequest)
+	newItem.ID = len(items) + 1
+	items = append(items, newItem)
+
+	// Проверяем, что строка URL передана корректно
+	if newItem.Name == "" {
+		http.Error(w, "Пустая строка URL", http.StatusBadRequest)
 		return
 	}
 
-	id := generateID()
-	urls[id] = url
+	// Создаем сокращенную ссылку
+	shortenedURL := ShortenedURL{
+		ID:        newItem.ID,
+		Original:  newItem.Name,
+		Shortened: "http://localhost:8080/" + strconv.Itoa(newItem.ID),
+	}
+	shortenedURLs = append(shortenedURLs, shortenedURL)
 
 	w.WriteHeader(http.StatusCreated)
-	fmt.Fprintf(w, "Shortened URL: http://localhost:8080/%s", id)
+	fmt.Fprintf(w, shortenedURL.Shortened)
 }
 
-func handleGet(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+func getOriginalURL(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.Atoi(strings.TrimPrefix(r.URL.Path, "/"))
+	if err != nil {
+		http.Error(w, "Некорректный идентификатор сокращенной ссылки", http.StatusBadRequest)
 		return
 	}
 
-	id := r.URL.Path[1:]
-	url, ok := urls[id]
-	if !ok {
-		http.Error(w, "URL Not Found", http.StatusNotFound)
-		return
+	for _, shortenedURL := range shortenedURLs {
+		if shortenedURL.ID == id {
+			// Отправляем оригинальный URL в заголовке Location
+			w.Header().Set("Location", shortenedURL.Original)
+			w.WriteHeader(http.StatusTemporaryRedirect)
+			return
+		}
 	}
 
-	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
-}
-
-func generateID() string {
-	return fmt.Sprintf("%d", time.Now().UnixNano())
+	// Если сокращенный URL не найден, отправляем ошибку 400
+	http.Error(w, fmt.Sprintf("Сокращенный URL с ID %v не найден", id), http.StatusBadRequest)
 }
