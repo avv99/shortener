@@ -68,7 +68,7 @@ func GetOriginalURL(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, fmt.Sprintf("Сокращенный URL с ID %v не найден", id), http.StatusBadRequest)
 }
 
-func ApiShorten(w http.ResponseWriter, r *http.Request) {
+func APIShorten(w http.ResponseWriter, r *http.Request) {
 	var newItem ShortenedURL
 
 	type result struct {

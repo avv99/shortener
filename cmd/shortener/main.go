@@ -18,7 +18,7 @@ func main() {
 	})
 
 	r.Post("/api/shorten", func(w http.ResponseWriter, r *http.Request) {
-		handlers.ApiShorten(w, r)
+		handlers.APIShorten(w, r)
 	})
 	fmt.Println("Сервер запущен на порту 8080...")
 	http.ListenAndServe(":8080", r)
