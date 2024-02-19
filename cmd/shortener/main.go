@@ -46,18 +46,12 @@ func addItem(w http.ResponseWriter, r *http.Request) {
 	var newItem Item
 	err := json.NewDecoder(r.Body).Decode(&newItem)
 	if err != nil {
-		http.Error(w, "Ошибка при декодировании JSON", http.StatusBadRequest)
+		http.Error(w, "Внутренняя ошибка сервера", http.StatusInternalServerError)
 		return
 	}
 
 	newItem.ID = len(items) + 1
 	items = append(items, newItem)
-
-	// Проверяем, что строка URL передана корректно
-	if newItem.Name == "" {
-		http.Error(w, "Пустая строка URL", http.StatusBadRequest)
-		return
-	}
 
 	// Создаем сокращенную ссылку
 	shortenedURL := ShortenedURL{
