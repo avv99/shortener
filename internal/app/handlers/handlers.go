@@ -96,7 +96,7 @@ func APIShorten(w http.ResponseWriter, r *http.Request) {
 	resultW.Result = newItem.Shortened
 
 	// Кодирование сокращенной ссылки в JSON
-	responseJSON, err := json.Marshal(resultW)
+	ResponseJSON, err := json.Marshal(resultW)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -105,5 +105,5 @@ func APIShorten(w http.ResponseWriter, r *http.Request) {
 	// Отправка ответа в виде JSON
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	w.Write(responseJSON)
+	w.Write(ResponseJSON)
 }
