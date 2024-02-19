@@ -88,7 +88,8 @@ func APIShorten(w http.ResponseWriter, r *http.Request) {
 	newItem.ID = len(shortenedURLs) + 1
 
 	// Формирование сокращенной ссылки
-	//aeaeaeeajbkkghfghfhfkfhfhg
+	//aeaeaeeajbkkghfghfhfkfhfhg32153215123
+	//43214213412341234
 	newItem.Shortened = "http://localhost:8080/" + strconv.Itoa(newItem.ID)
 
 	// Добавление нового элемента в массив
