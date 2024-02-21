@@ -4,31 +4,33 @@ import (
 	"fmt"
 	"github.com/go-chi/chi/v5"
 	"net/http"
-	"os"
+	"os" // Импортируем пакет для работы с переменными окружения
 	"shortener/internal/app/handlers"
 )
 
-func getEnv(key, fallback string) string {
-	if value, exists := os.LookupEnv(key); exists {
-		return value
-	}
-	return fallback
-}
-
 func main() {
-	serverAddress := getEnv("SERVER_ADDRESS", ":8080")
-	baseURL := getEnv("BASE_URL", "http://localhost:8080/")
-
-	handlers.SetBaseURL(baseURL) // Установка baseURL для обработчиков
-
 	r := chi.NewRouter()
+	r.Get("/{id}", func(w http.ResponseWriter, r *http.Request) {
+		handlers.GetOriginalURL(w, r)
+	})
 
-	r.Get("/{id}", handlers.GetOriginalURL)
-	r.Post("/", handlers.AddItem)
-	r.Post("/api/shorten", handlers.APIShorten)
+	r.Post("/", func(w http.ResponseWriter, r *http.Request) {
+		handlers.AddItem(w, r)
+	})
 
-	fmt.Printf("Сервер запущен на адресе %s\n", serverAddress)
+	r.Post("/api/shorten", func(w http.ResponseWriter, r *http.Request) {
+		handlers.APIShorten(w, r)
+	})
+
+	// Получаем адрес сервера из переменной окружения
+	serverAddress := os.Getenv("SERVER_ADDRESS")
+	if serverAddress == "" {
+		// Если переменная не установлена, используем порт по умолчанию
+		serverAddress = ":8080"
+	}
+
+	fmt.Printf("Сервер запущен на адресе %s...\n", serverAddress)
 	if err := http.ListenAndServe(serverAddress, r); err != nil {
-		fmt.Printf("Ошибка при запуске сервера: %s\n", err)
+		fmt.Printf("Ошибка при запуске сервера: %v\n", err)
 	}
 }

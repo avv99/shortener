@@ -3,16 +3,12 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/go-chi/chi/v5"
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
-)
-
-var (
-	items         []Item
-	shortenedURLs []ShortenedURL
-	baseURL       string // Глобальная переменная для хранения базового URL
 )
 
 type Item struct {
@@ -26,15 +22,14 @@ type ShortenedURL struct {
 	Shortened string `json:"shortened"`
 }
 
-// SetBaseURL устанавливает базовый URL для формирования сокращенных ссылок
-func SetBaseURL(url string) {
-	baseURL = url
-}
+var items []Item
+var shortenedURLs []ShortenedURL
 
 func AddItem(w http.ResponseWriter, r *http.Request) {
 	str, err := io.ReadAll(r.Body)
 	if err != nil {
 		log.Println(err)
+		http.Error(w, "Ошибка чтения тела запроса", http.StatusInternalServerError)
 		return
 	}
 
@@ -42,7 +37,7 @@ func AddItem(w http.ResponseWriter, r *http.Request) {
 	shortenedURL := ShortenedURL{
 		ID:        id,
 		Original:  string(str),
-		Shortened: fmt.Sprintf("%s%s", baseURL, strconv.Itoa(id)), // Использование baseURL
+		Shortened: fmt.Sprintf("%s/%d", getBaseURL(r), id),
 	}
 	shortenedURLs = append(shortenedURLs, shortenedURL)
 
@@ -51,7 +46,27 @@ func AddItem(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetOriginalURL(w http.ResponseWriter, r *http.Request) {
-	// Тело функции остается без изменений
+	id := chi.URLParam(r, "id")
+
+	idnew, err := strconv.Atoi(id)
+	if err != nil {
+		log.Println("Некорректный идентификатор сокращенной ссылки")
+		return
+	}
+
+	for _, shortenedURL := range shortenedURLs {
+		if shortenedURL.ID == idnew {
+			// Устанавливаем заголовок Location для перенаправления
+			w.Header().Set("Location", shortenedURL.Original)
+			// Устанавливаем статус ответа на 307 Temporary Redirect
+			http.Redirect(w, r, shortenedURL.Original, http.StatusTemporaryRedirect)
+
+			return
+		}
+	}
+
+	// Если сокращенный URL не найден, отправляем ошибку 400
+	http.Error(w, fmt.Sprintf("Сокращенный URL с ID %v не найден", id), http.StatusBadRequest)
 }
 
 func APIShorten(w http.ResponseWriter, r *http.Request) {
@@ -70,7 +85,8 @@ func APIShorten(w http.ResponseWriter, r *http.Request) {
 	}
 
 	newItem.ID = len(shortenedURLs) + 1
-	newItem.Shortened = fmt.Sprintf("%s%s", baseURL, strconv.Itoa(newItem.ID)) // Использование baseURL
+
+	newItem.Shortened = fmt.Sprintf("%s/%d", getBaseURL(r), newItem.ID)
 
 	shortenedURLs = append(shortenedURLs, newItem)
 
@@ -85,4 +101,12 @@ func APIShorten(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	w.Write(ResponseJSON)
+}
+
+func getBaseURL(r *http.Request) string {
+	baseURL := os.Getenv("BASE_URL")
+	if baseURL == "" {
+		baseURL = "http://localhost:8080"
+	}
+	return baseURL
 }
