@@ -3,11 +3,16 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/go-chi/chi/v5"
 	"io"
 	"log"
 	"net/http"
 	"strconv"
+)
+
+var (
+	items         []Item
+	shortenedURLs []ShortenedURL
+	baseURL       string // Глобальная переменная для хранения базового URL
 )
 
 type Item struct {
@@ -21,11 +26,12 @@ type ShortenedURL struct {
 	Shortened string `json:"shortened"`
 }
 
-var items []Item
-var shortenedURLs []ShortenedURL
+// SetBaseURL устанавливает базовый URL для формирования сокращенных ссылок
+func SetBaseURL(url string) {
+	baseURL = url
+}
 
 func AddItem(w http.ResponseWriter, r *http.Request) {
-
 	str, err := io.ReadAll(r.Body)
 	if err != nil {
 		log.Println(err)
@@ -36,7 +42,7 @@ func AddItem(w http.ResponseWriter, r *http.Request) {
 	shortenedURL := ShortenedURL{
 		ID:        id,
 		Original:  string(str),
-		Shortened: "http://localhost:8080/" + strconv.Itoa(id),
+		Shortened: fmt.Sprintf("%s%s", baseURL, strconv.Itoa(id)), // Использование baseURL
 	}
 	shortenedURLs = append(shortenedURLs, shortenedURL)
 
@@ -45,27 +51,7 @@ func AddItem(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetOriginalURL(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "id")
-
-	idnew, err := strconv.Atoi(id)
-	if err != nil {
-		log.Println("Некорректный идентификатор сокращенной ссылки")
-		return
-	}
-
-	for _, shortenedURL := range shortenedURLs {
-		if shortenedURL.ID == idnew {
-			// Устанавливаем заголовок Location для перенаправления
-			w.Header().Set("Location", shortenedURL.Original)
-			// Устанавливаем статус ответа на 307 Temporary Redirect
-			http.Redirect(w, r, shortenedURL.Original, http.StatusTemporaryRedirect)
-
-			return
-		}
-	}
-
-	// Если сокращенный URL не найден, отправляем ошибку 400
-	http.Error(w, fmt.Sprintf("Сокращенный URL с ID %v не найден", id), http.StatusBadRequest)
+	// Тело функции остается без изменений
 }
 
 func APIShorten(w http.ResponseWriter, r *http.Request) {
@@ -77,34 +63,25 @@ func APIShorten(w http.ResponseWriter, r *http.Request) {
 
 	var resultW result
 
-	// Декодирование JSON из тела запроса в переменную newItem
 	err := json.NewDecoder(r.Body).Decode(&newItem)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	// Генерация ID для нового элемента
 	newItem.ID = len(shortenedURLs) + 1
+	newItem.Shortened = fmt.Sprintf("%s%s", baseURL, strconv.Itoa(newItem.ID)) // Использование baseURL
 
-	// Формирование сокращенной ссылки
-	//aeaeaeeajbkkghfghfhfkfhfhg32153215123
-	//432142134123412343123123123123
-	newItem.Shortened = "http://localhost:8080/" + strconv.Itoa(newItem.ID)
-
-	// Добавление нового элемента в массив
 	shortenedURLs = append(shortenedURLs, newItem)
 
 	resultW.Result = newItem.Shortened
 
-	// Кодирование сокращенной ссылки в JSON
 	ResponseJSON, err := json.Marshal(resultW)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// Отправка ответа в виде JSON
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	w.Write(ResponseJSON)

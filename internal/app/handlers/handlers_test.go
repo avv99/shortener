@@ -4,10 +4,21 @@ import (
 	"bytes"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 )
 
 func TestAddItem(t *testing.T) {
+	// Установка тестового значения BASE_URL
+	testBaseURL := "http://test.com/"
+	os.Setenv("BASE_URL", testBaseURL)
+	SetBaseURL(testBaseURL) // Обновление baseURL в обработчиках
+
+	// Восстановление исходного состояния после завершения теста
+	defer func() {
+		os.Unsetenv("BASE_URL")
+	}()
+
 	// Создание тестового запроса
 	requestBody := []byte("http://example.com")
 	req, err := http.NewRequest("POST", "/", bytes.NewBuffer(requestBody))
@@ -27,8 +38,8 @@ func TestAddItem(t *testing.T) {
 			status, http.StatusCreated)
 	}
 
-	// Проверка корректности ответа
-	expectedResponse := "http://localhost:8080/1"
+	// Ожидаемый ответ должен соответствовать testBaseURL
+	expectedResponse := testBaseURL + "1"
 	if w.Body.String() != expectedResponse {
 		t.Errorf("handler returned unexpected body: got %v want %v",
 			w.Body.String(), expectedResponse)
