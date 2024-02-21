@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/go-chi/chi/v5"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -39,14 +38,15 @@ func loadDataFromDisk() {
 		return
 	}
 
-	data, err := ioutil.ReadFile(filePath)
+	file, err := os.Open(filePath)
 	if err != nil {
-		log.Printf("Ошибка чтения файла хранилища: %v. Используется хранение в памяти.\n", err)
+		log.Printf("Ошибка открытия файла хранилища: %v. Используется хранение в памяти.\n", err)
 		return
 	}
+	defer file.Close()
 
-	err = json.Unmarshal(data, &shortenedURLs)
-	if err != nil {
+	decoder := json.NewDecoder(file)
+	if err := decoder.Decode(&shortenedURLs); err != nil {
 		log.Printf("Ошибка декодирования данных из файла хранилища: %v. Используется хранение в памяти.\n", err)
 		return
 	}
@@ -61,15 +61,16 @@ func saveDataToDisk() {
 		return
 	}
 
-	data, err := json.Marshal(shortenedURLs)
+	file, err := os.Create(filePath)
 	if err != nil {
-		log.Printf("Ошибка кодирования данных для сохранения на диск: %v. Невозможно сохранить данные.\n", err)
+		log.Printf("Ошибка создания файла хранилища: %v. Невозможно сохранить данные.\n", err)
 		return
 	}
+	defer file.Close()
 
-	err = ioutil.WriteFile(filePath, data, 0644)
-	if err != nil {
-		log.Printf("Ошибка записи данных на диск: %v. Невозможно сохранить данные.\n", err)
+	encoder := json.NewEncoder(file)
+	if err := encoder.Encode(shortenedURLs); err != nil {
+		log.Printf("Ошибка кодирования данных для сохранения на диск: %v. Невозможно сохранить данные.\n", err)
 		return
 	}
 
