@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 )
 
@@ -25,10 +26,10 @@ var items []Item
 var shortenedURLs []ShortenedURL
 
 func AddItem(w http.ResponseWriter, r *http.Request) {
-
 	str, err := io.ReadAll(r.Body)
 	if err != nil {
 		log.Println(err)
+		http.Error(w, "Ошибка чтения тела запроса", http.StatusInternalServerError)
 		return
 	}
 
@@ -36,7 +37,7 @@ func AddItem(w http.ResponseWriter, r *http.Request) {
 	shortenedURL := ShortenedURL{
 		ID:        id,
 		Original:  string(str),
-		Shortened: "http://localhost:8080/" + strconv.Itoa(id),
+		Shortened: fmt.Sprintf("%s/%d", getBaseURL(r), id),
 	}
 	shortenedURLs = append(shortenedURLs, shortenedURL)
 
@@ -77,35 +78,35 @@ func APIShorten(w http.ResponseWriter, r *http.Request) {
 
 	var resultW result
 
-	// Декодирование JSON из тела запроса в переменную newItem
 	err := json.NewDecoder(r.Body).Decode(&newItem)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	// Генерация ID для нового элемента
 	newItem.ID = len(shortenedURLs) + 1
 
-	// Формирование сокращенной ссылки
-	//aeaeaeeajbkkghfghfhfkfhfhg32153215123
-	//43214213412341234
-	newItem.Shortened = "http://localhost:8080/" + strconv.Itoa(newItem.ID)
+	newItem.Shortened = fmt.Sprintf("%s/%d", getBaseURL(r), newItem.ID)
 
-	// Добавление нового элемента в массив
 	shortenedURLs = append(shortenedURLs, newItem)
 
 	resultW.Result = newItem.Shortened
 
-	// Кодирование сокращенной ссылки в JSON
 	ResponseJSON, err := json.Marshal(resultW)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// Отправка ответа в виде JSON
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	w.Write(ResponseJSON)
+}
+
+func getBaseURL(r *http.Request) string {
+	baseURL := os.Getenv("BASE_URL")
+	if baseURL == "" {
+		baseURL = "http://localhost:8080"
+	}
+	return baseURL
 }
