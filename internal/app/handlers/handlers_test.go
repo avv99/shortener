@@ -18,6 +18,10 @@ func TestAddItem(t *testing.T) {
 	// Создание mock HTTP ResponseWriter
 	w := httptest.NewRecorder()
 
+	// Установка baseURL для тестового окружения
+	baseURL := "http://localhost:8080"
+	SetBaseURL(baseURL)
+
 	// Вызов функции
 	AddItem(w, req)
 
@@ -28,7 +32,7 @@ func TestAddItem(t *testing.T) {
 	}
 
 	// Проверка корректности ответа
-	expectedResponse := "http://localhost:8080/1"
+	expectedResponse := baseURL + "/1"
 	if w.Body.String() != expectedResponse {
 		t.Errorf("handler returned unexpected body: got %v want %v",
 			w.Body.String(), expectedResponse)
