@@ -3,17 +3,18 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/go-chi/chi/v5"
 	"log"
 	"net/http"
 	"os"
 	"shortener/internal/app/handlers"
+
+	"github.com/go-chi/chi/v5"
 )
 
 func main() {
 	// Объявление флагов
-	serverAddress := flag.String("a", "localhost:8080", "адрес запуска HTTP-сервера")
-	baseURL := flag.String("b", "http://localhost:8080", "базовый адрес результирующего сокращённого URL")
+	serverAddress := flag.String("a", "", "адрес запуска HTTP-сервера")
+	baseURL := flag.String("b", "", "базовый адрес результирующего сокращённого URL")
 	fileStoragePath := flag.String("f", "", "путь до файла с сокращёнными URL")
 	flag.Parse()
 
@@ -24,11 +25,16 @@ func main() {
 		}
 	}
 
-	// Установка базового URL в обработчиках
-	handlers.SetBaseURL(*baseURL)
-
 	// Загрузка данных из файла (если есть)
 	handlers.LoadDataFromDisk()
+
+	// Проверка наличия переменных окружения для флагов, если они не установлены через флаги
+	if *serverAddress == "" {
+		*serverAddress = os.Getenv("SERVER_ADDRESS")
+	}
+	if *baseURL == "" {
+		*baseURL = os.Getenv("BASE_URL")
+	}
 
 	r := chi.NewRouter()
 	r.Get("/{id}", handlers.GetOriginalURL)
