@@ -18,6 +18,17 @@ func main() {
 	fileStoragePath := flag.String("f", "", "путь до файла с сокращёнными URL")
 	flag.Parse()
 
+	// Приоритет значений, полученных через ENV, перед значениями, задаваемыми посредством флагов
+	if *serverAddress == "" {
+		*serverAddress = os.Getenv("SERVER_ADDRESS")
+	}
+	if *baseURL == "" {
+		*baseURL = os.Getenv("BASE_URL")
+	}
+	if *fileStoragePath == "" {
+		*fileStoragePath = os.Getenv("FILE_STORAGE_PATH")
+	}
+
 	// Установка переменных окружения, если они не установлены через флаги
 	if *fileStoragePath != "" {
 		if err := os.Setenv("FILE_STORAGE_PATH", *fileStoragePath); err != nil {
@@ -27,14 +38,6 @@ func main() {
 
 	// Загрузка данных из файла (если есть)
 	handlers.LoadDataFromDisk()
-
-	// Проверка наличия переменных окружения для флагов, если они не установлены через флаги
-	if *serverAddress == "" {
-		*serverAddress = os.Getenv("SERVER_ADDRESS")
-	}
-	if *baseURL == "" {
-		*baseURL = os.Getenv("BASE_URL")
-	}
 
 	r := chi.NewRouter()
 	r.Get("/{id}", handlers.GetOriginalURL)
