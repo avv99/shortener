@@ -19,7 +19,7 @@ func TestAddItem(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	// Установка baseURL для тестового окружения
-	baseURL := "http://localhost:8080"
+	baseURL := GetServerAddress()
 	SetBaseURL(baseURL)
 
 	// Вызов функции

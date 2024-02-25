@@ -180,3 +180,11 @@ func getBaseURL(r *http.Request) string {
 	}
 	return baseURL
 }
+
+func GetServerAddress() string {
+	serverAddress := os.Getenv("SERVER_ADDRESS")
+	if serverAddress == "" {
+		serverAddress = "localhost:8080"
+	}
+	return serverAddress
+}
