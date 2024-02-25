@@ -26,12 +26,17 @@ type ShortenedURL struct {
 var items []Item
 var shortenedURLs []ShortenedURL
 var storageMutex sync.Mutex
+var baseURL string
 
-func init() {
-	loadDataFromDisk()
+func SetBaseURL(url string) {
+	baseURL = url
 }
 
-func loadDataFromDisk() {
+func init() {
+	baseURL = os.Getenv("BASE_URL")
+}
+
+func LoadDataFromDisk() {
 	filePath := os.Getenv("FILE_STORAGE_PATH")
 	if filePath == "" {
 		log.Println("Переменная окружения FILE_STORAGE_PATH не установлена. Используется хранение в памяти.")
@@ -92,7 +97,7 @@ func AddItem(w http.ResponseWriter, r *http.Request) {
 	shortenedURL := ShortenedURL{
 		ID:        id,
 		Original:  string(str),
-		Shortened: fmt.Sprintf("%s/%d", getBaseURL(r), id),
+		Shortened: fmt.Sprintf("%s/%d", baseURL, id), // Использование baseURL для формирования короткого URL
 	}
 	shortenedURLs = append(shortenedURLs, shortenedURL)
 
@@ -122,7 +127,7 @@ func APIShorten(w http.ResponseWriter, r *http.Request) {
 
 	newItem.ID = len(shortenedURLs) + 1
 
-	newItem.Shortened = fmt.Sprintf("%s/%d", getBaseURL(r), newItem.ID)
+	newItem.Shortened = fmt.Sprintf("%s/%d", baseURL, newItem.ID) // Использование baseURL для формирования короткого URL
 
 	shortenedURLs = append(shortenedURLs, newItem)
 
