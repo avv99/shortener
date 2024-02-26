@@ -1,36 +1,42 @@
 package main
 
 import (
+	"flag"
 	"fmt"
-	"github.com/go-chi/chi/v5"
+	"log"
 	"net/http"
-	"os" // Импортируем пакет для работы с переменными окружения1112
+	"os"
+
+	"github.com/go-chi/chi/v5"
 	"shortener/internal/app/handlers"
 )
 
 func main() {
-	r := chi.NewRouter()
-	r.Get("/{id}", func(w http.ResponseWriter, r *http.Request) {
-		handlers.GetOriginalURL(w, r)
-	})
+	// Определение флагов командной строки
+	address := flag.String("a", ":8080", "HTTP server address")
+	baseURL := flag.String("b", "http://localhost:8080", "Base URL for shortened URLs")
+	filePath := flag.String("f", "", "Path to file with shortened URLs")
+	flag.Parse()
 
-	r.Post("/", func(w http.ResponseWriter, r *http.Request) {
-		handlers.AddItem(w, r)
-	})
-
-	r.Post("/api/shorten", func(w http.ResponseWriter, r *http.Request) {
-		handlers.APIShorten(w, r)
-	})
-
-	// Получаем адрес сервера из переменной окружения111
-	serverAddress := os.Getenv("SERVER_ADDRESS")
-	if serverAddress == "" {
-		// Если переменная не установлена, используем порт по умолчанию
-		serverAddress = ":8080"
+	// Задание значений по умолчанию для переменных окружения
+	if os.Getenv("SERVER_ADDRESS") == "" {
+		os.Setenv("SERVER_ADDRESS", *address)
+	}
+	if os.Getenv("BASE_URL") == "" {
+		os.Setenv("BASE_URL", *baseURL)
+	}
+	if os.Getenv("FILE_STORAGE_PATH") == "" {
+		os.Setenv("FILE_STORAGE_PATH", *filePath)
 	}
 
+	r := chi.NewRouter()
+	r.Get("/{id}", handlers.GetOriginalURL)
+	r.Post("/", handlers.AddItem)
+	r.Post("/api/shorten", handlers.APIShorten)
+
+	serverAddress := os.Getenv("SERVER_ADDRESS")
 	fmt.Printf("Сервер запущен на адресе %s...\n", serverAddress)
 	if err := http.ListenAndServe(serverAddress, r); err != nil {
-		fmt.Printf("Ошибка при запуске сервера: %v\n", err)
+		log.Fatalf("Ошибка при запуске сервера: %v\n", err)
 	}
 }
