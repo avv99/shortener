@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/go-chi/chi/v5"
 	"net/http"
-	"os" // Импортируем пакет для работы с переменными окружения
+	"os" // Импортируем пакет для работы с переменными окружения1
 	"shortener/internal/app/handlers"
 )
 
