@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"shortener/internal/app/config"
+	"shortener/internal/app/middleware"
 
 	"github.com/go-chi/chi/v5"
 	"shortener/internal/app/handlers"
@@ -18,7 +19,7 @@ func main() {
 	//r.Get("/{id}", handlers.GetOriginalURL)
 	//r.Post("/", handlers.AddItem)
 	//r.Post("/api/shorten", handlers.APIShorten)
-
+	r.Use(middleware.GzipMiddleware)
 	r.Post("/api/shorten", func(w http.ResponseWriter, r *http.Request) {
 		handlers.APIShorten(w, r, cfg)
 	})
