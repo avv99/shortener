@@ -42,7 +42,7 @@ func InitConfig() *Config {
 	if os.Getenv("FILE_STORAGE_PATH") == "" {
 		if *filePath == "" {
 			config.TypeStorage = "inMemory"
-			config.FilePath = ""
+			config.FilePath = "./"
 		} else {
 			config.TypeStorage = "inFile"
 			config.FilePath = *filePath
