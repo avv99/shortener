@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"shortener/internal/app/config"
 	"strconv"
 	"sync"
 )
@@ -83,7 +84,7 @@ func saveDataToDisk() {
 	log.Println("Данные успешно сохранены на диск.")
 }
 
-func AddItem(w http.ResponseWriter, r *http.Request) {
+func AddItem(w http.ResponseWriter, r *http.Request, cfg *config.Config) {
 	str, err := io.ReadAll(r.Body)
 	if err != nil {
 		log.Println(err)
@@ -98,7 +99,7 @@ func AddItem(w http.ResponseWriter, r *http.Request) {
 	shortenedURL := ShortenedURL{
 		ID:        id,
 		Original:  string(str),
-		Shortened: fmt.Sprintf("%s/%d", baseURL, id), // Использование baseURL для формирования короткого URL
+		Shortened: fmt.Sprintf("%s/%d", cfg.BaseURL, id), // Использование baseURL для формирования короткого URL
 	}
 	shortenedURLs = append(shortenedURLs, shortenedURL)
 
@@ -108,7 +109,7 @@ func AddItem(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(shortenedURL.Shortened))
 }
 
-func APIShorten(w http.ResponseWriter, r *http.Request) {
+func APIShorten(w http.ResponseWriter, r *http.Request, cfg *config.Config) {
 	var newItem ShortenedURL
 
 	type result struct {
@@ -128,7 +129,7 @@ func APIShorten(w http.ResponseWriter, r *http.Request) {
 
 	newItem.ID = len(shortenedURLs) + 1
 
-	newItem.Shortened = fmt.Sprintf("%s/%d", baseURL, newItem.ID) // Использование baseURL для формирования короткого URL
+	newItem.Shortened = fmt.Sprintf("%s/%d", cfg.BaseURL, newItem.ID) // Использование baseURL для формирования короткого URL
 
 	shortenedURLs = append(shortenedURLs, newItem)
 
@@ -147,7 +148,7 @@ func APIShorten(w http.ResponseWriter, r *http.Request) {
 	w.Write(ResponseJSON)
 }
 
-func GetOriginalURL(w http.ResponseWriter, r *http.Request) {
+func GetOriginalURL(w http.ResponseWriter, r *http.Request, cfg *config.Config) {
 	id := chi.URLParam(r, "id")
 
 	idnew, err := strconv.Atoi(id)
