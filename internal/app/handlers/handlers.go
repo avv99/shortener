@@ -33,6 +33,7 @@ func SetBaseURL(url string) {
 }
 
 func init() {
+	LoadDataFromDisk()
 	baseURL = os.Getenv("BASE_URL")
 }
 
