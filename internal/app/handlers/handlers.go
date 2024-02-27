@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"shortener/internal/app/config"
 	"strconv"
 	"sync"
 )
@@ -26,12 +27,18 @@ type ShortenedURL struct {
 var items []Item
 var shortenedURLs []ShortenedURL
 var storageMutex sync.Mutex
+var baseURL string
 
-func init() {
-	loadDataFromDisk()
+func SetBaseURL(url string) {
+	baseURL = url
 }
 
-func loadDataFromDisk() {
+func init() {
+	LoadDataFromDisk()
+	baseURL = os.Getenv("BASE_URL")
+}
+
+func LoadDataFromDisk() {
 	filePath := os.Getenv("FILE_STORAGE_PATH")
 	if filePath == "" {
 		log.Println("Переменная окружения FILE_STORAGE_PATH не установлена. Используется хранение в памяти.")
@@ -77,7 +84,7 @@ func saveDataToDisk() {
 	log.Println("Данные успешно сохранены на диск.")
 }
 
-func AddItem(w http.ResponseWriter, r *http.Request) {
+func AddItem(w http.ResponseWriter, r *http.Request, cfg *config.Config) {
 	str, err := io.ReadAll(r.Body)
 	if err != nil {
 		log.Println(err)
@@ -92,7 +99,7 @@ func AddItem(w http.ResponseWriter, r *http.Request) {
 	shortenedURL := ShortenedURL{
 		ID:        id,
 		Original:  string(str),
-		Shortened: fmt.Sprintf("%s/%d", getBaseURL(r), id),
+		Shortened: fmt.Sprintf("%s/%d", cfg.BaseURL, id), // Использование baseURL для формирования короткого URL
 	}
 	shortenedURLs = append(shortenedURLs, shortenedURL)
 
@@ -102,7 +109,7 @@ func AddItem(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(shortenedURL.Shortened))
 }
 
-func APIShorten(w http.ResponseWriter, r *http.Request) {
+func APIShorten(w http.ResponseWriter, r *http.Request, cfg *config.Config) {
 	var newItem ShortenedURL
 
 	type result struct {
@@ -122,7 +129,7 @@ func APIShorten(w http.ResponseWriter, r *http.Request) {
 
 	newItem.ID = len(shortenedURLs) + 1
 
-	newItem.Shortened = fmt.Sprintf("%s/%d", getBaseURL(r), newItem.ID)
+	newItem.Shortened = fmt.Sprintf("%s/%d", cfg.BaseURL, newItem.ID) // Использование baseURL для формирования короткого URL
 
 	shortenedURLs = append(shortenedURLs, newItem)
 
@@ -174,4 +181,12 @@ func getBaseURL(r *http.Request) string {
 		baseURL = "http://localhost:8080"
 	}
 	return baseURL
+}
+
+func GetServerAddress() string {
+	serverAddress := os.Getenv("SERVER_ADDRESS")
+	if serverAddress == "" {
+		serverAddress = "localhost:8080"
+	}
+	return serverAddress
 }
