@@ -29,6 +29,8 @@ func InitConfig() *Config {
 			config.PORT = *address
 		}
 		os.Setenv("SERVER_ADDRESS", config.PORT)
+	} else {
+		config.PORT = os.Getenv("SERVER_ADDRESS")
 	}
 	if os.Getenv("BASE_URL") == "" {
 		if *baseURL == "" {
@@ -37,6 +39,8 @@ func InitConfig() *Config {
 			config.BaseURL = *baseURL
 		}
 		os.Setenv("BASE_URL", config.BaseURL)
+	} else {
+		config.BaseURL = os.Getenv("BASE_URL")
 	}
 
 	if os.Getenv("FILE_STORAGE_PATH") == "" {
@@ -48,6 +52,8 @@ func InitConfig() *Config {
 			config.FilePath = *filePath
 		}
 		os.Setenv("FILE_STORAGE_PATH", config.FilePath)
+	} else {
+		config.FilePath = os.Getenv("FILE_STORAGE_PATH")
 	}
 	return &config
 }
