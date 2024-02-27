@@ -19,7 +19,7 @@ func main() {
 	//r.Get("/{id}", handlers.GetOriginalURL)
 	//r.Post("/", handlers.AddItem)
 	//r.Post("/api/shorten", handlers.APIShorten)
-	r.Use(middleware.GzipMiddleware)
+	r.Use(middleware.GZipMiddleware)
 	r.Post("/api/shorten", func(w http.ResponseWriter, r *http.Request) {
 		handlers.APIShorten(w, r, cfg)
 	})
