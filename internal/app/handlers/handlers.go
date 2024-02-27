@@ -148,7 +148,7 @@ func APIShorten(w http.ResponseWriter, r *http.Request, cfg *config.Config) {
 	w.Write(ResponseJSON)
 }
 
-func GetOriginalURL(w http.ResponseWriter, r *http.Request, cfg *config.Config) {
+func GetOriginalURL(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 
 	idnew, err := strconv.Atoi(id)

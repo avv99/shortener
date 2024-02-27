@@ -24,7 +24,7 @@ func main() {
 	})
 
 	r.Get("/{id}", func(w http.ResponseWriter, r *http.Request) {
-		handlers.GetOriginalURL(w, r, cfg)
+		handlers.GetOriginalURL(w, r)
 	})
 
 	r.Post("/", func(w http.ResponseWriter, r *http.Request) {

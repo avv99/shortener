@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"net/http"
 	"net/http/httptest"
+	"shortener/internal/app/config"
 	"testing"
 )
 
@@ -21,9 +22,9 @@ func TestAddItem(t *testing.T) {
 	// Установка baseURL для тестового окружения
 	baseURL := GetServerAddress()
 	SetBaseURL(baseURL)
-
+	cfg := config.InitConfig()
 	// Вызов функции
-	AddItem(w, req)
+	AddItem(w, req, cfg)
 
 	// Проверка статуса кода
 	if status := w.Code; status != http.StatusCreated {
